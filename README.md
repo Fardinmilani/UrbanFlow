@@ -16,11 +16,16 @@ Dive into the **UrbanFlow** project! This tool, built with Python, explores city
 
 ## What’s Inside
 
-This project comes with a Jupyter Notebook (`Transport project v2.ipynb`) to map and study transportation networks as directed graphs. Locations are nodes, and paths are edges—some one-way, some two-way. The code:
-- Draws the network with `networkx` and `matplotlib`.
-- Figures out all routes between any two points.
-- Tallies up how often each link appears to spot key connections.
-- Saves results as a DataFrame and exports them to CSV, Excel, and text files.
+This project now includes:
+
+- **Python package** (`urbanflow`) to work with directed transport networks:
+  - Draws the network with `networkx` and `matplotlib`.
+  - Figures out all routes between any two points.
+  - Tallies up how often each link appears to spot key connections.
+  - Builds an OD–edge incidence matrix.
+  - Saves results as DataFrames and exports them to CSV, Excel, and text files.
+- **CLI tool** (`python -m urbanflow.cli`) to run the full analysis from a CSV edge list.
+- **Demo Notebook** (`UrbanFlow_demo.ipynb`) to show the Python API on a toy network.
 
 It’s powered by Python and uses libraries like `pandas`, `networkx`, `matplotlib`, and `numpy`.
 
@@ -30,7 +35,7 @@ It’s powered by Python and uses libraries like `pandas`, `networkx`, `matplotl
 - 🛤️ **Route Tracking**: Lists every possible path between locations.
 - 🔍 **Link Priority**: Highlights which connections get used the most.
 - 💾 **File Output**: Dumps results into CSV, Excel, and text files.
-- 🚀 **User-Friendly**: Runs in a Jupyter Notebook for easy tinkering.
+- 🚀 **User-Friendly**: Use it as a Python module, from the CLI, or via a Jupyter Notebook demo.
 
 ## Getting Started
 
@@ -43,41 +48,65 @@ To run this on your machine, try these steps:
    ```
 
 2. **Install What You Need**:
-   Make sure Python 3.11+ is ready. Then, get the libraries:
+   Make sure Python 3.11+ is ready. Then, install the dependencies:
    ```bash
-   pip install pandas networkx matplotlib numpy
+   pip install -r requirements.txt
    ```
 
-3. **Set Up Jupyter**:
+3. **(Optional) Set Up Jupyter**:
    If you don’t have Jupyter, add it:
    ```bash
    pip install jupyter
    ```
 
-4. **Launch It**:
-   Start Jupyter Notebook and open `Transport project v2.ipynb`:
+4. **(Optional) Launch the Demo Notebook**:
+   Start Jupyter Notebook and open `UrbanFlow_demo.ipynb`:
    ```bash
    jupyter notebook
    ```
 
+5. **Run the CLI on Your Own Network**:
+   Prepare a CSV file with at least two columns: `from`, `to` (each row is a directed edge).
+
+   Then run:
+
+   ```bash
+   python -m urbanflow.cli path/to/edges.csv --output-dir my_output
+   ```
+
+   This will generate:
+   - `urbanflow_edge_usage.csv`
+   - `urbanflow_od_incidence.csv`
+   - `urbanflow_results.xlsx`
+   - `urbanflow_network.png`
+
 ## How to Use
 
-1. Load `Transport project v2.ipynb` in Jupyter Notebook.
-2. Run the cells one by one to:
-   - Load the tools.
-   - Set up the graph (tweak the `graph` dictionary for your network).
-   - See the graph.
-   - Compute paths and link counts.
-   - Save outputs to `incidence_matrix.csv`, `incidence_matrix.xlsx`, `incidence_matrix.txt`.
-3. Adjust the `graph` dictionary to match your network. Example:
-   ```python
-   graph = {
-       '1': ['3'],
-       '2': ['3'],
-       '3': ['4', '4'],  # Two paths from 3 to 4
-       '4': []
-   }
-   ```
+### Use as a Python module
+
+You can import `urbanflow` in any Python script or notebook:
+
+```python
+from urbanflow import analyze_network, save_analysis_results
+
+graph = {
+    "1": ["3"],
+    "2": ["3"],
+    "3": ["4", "4"],  # two parallel links 3->4
+    "4": [],
+}
+
+result = analyze_network(graph)
+save_analysis_results(result, output_dir="urbanflow_output", base_name="urbanflow_demo")
+```
+
+### Use via CLI
+
+```bash
+python -m urbanflow.cli edges.csv --output-dir analysis_out
+```
+
+This reads `edges.csv`, runs the analysis, and writes outputs to the `analysis_out` folder.
 
 ## Sample Results
 
@@ -87,18 +116,10 @@ Here’s a peek at the network visualization:
 
 You’ll get:
 - A full list of paths between nodes.
-- A table of link usage, saved as:
-  - `incidence_matrix.csv`
-  - `incidence_matrix.xlsx`
-  - `incidence_matrix.txt`
-
-Sample link count:
-```
-Link repetitions:
-('1', '3'): 3 times
-('3', '4'): 6 times
-('2', '3'): 3 times
-```
+- A table of link usage and an OD–edge incidence matrix, saved as:
+  - `urbanflow_edge_usage.csv`
+  - `urbanflow_od_incidence.csv`
+  - `urbanflow_results.xlsx`
 
 ## Join In
 
