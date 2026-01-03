@@ -1,6 +1,14 @@
-pandas
-networkx
-matplotlib
-numpy
+# UrbanFlow dependencies
+# Python 3.11+ required
 
+pandas>=2.0.0
+networkx>=3.0
+matplotlib>=3.7.0
+numpy>=1.24.0
+
+# Testing (optional, for development)
+pytest>=7.4.0
+
+# Optional: for running notebooks
+# jupyter>=1.0.0
 

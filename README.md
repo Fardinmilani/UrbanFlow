@@ -47,31 +47,45 @@ To run this on your machine, try these steps:
    cd UrbanFlow
    ```
 
-2. **Install What You Need**:
+2. **Set Up Python Environment** (Recommended):
+   Create a virtual environment to avoid conflicts:
+   ```bash
+   python -m venv .venv
+   ```
+   
+   Activate it:
+   - **Windows**: `.venv\Scripts\activate`
+   - **macOS/Linux**: `source .venv/bin/activate`
+
+3. **Install Dependencies**:
    Make sure Python 3.11+ is ready. Then, install the dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **(Optional) Set Up Jupyter**:
+4. **(Optional) Set Up Jupyter**:
    If you don’t have Jupyter, add it:
    ```bash
    pip install jupyter
    ```
 
-4. **(Optional) Launch the Demo Notebook**:
+5. **(Optional) Launch the Demo Notebook**:
    Start Jupyter Notebook and open `UrbanFlow_demo.ipynb`:
    ```bash
    jupyter notebook
    ```
 
-5. **Run the CLI on Your Own Network**:
+6. **Run the CLI on Your Own Network**:
    Prepare a CSV file with at least two columns: `from`, `to` (each row is a directed edge).
 
-   Then run:
-
+   Try the example first:
    ```bash
-   python -m urbanflow.cli path/to/edges.csv --output-dir my_output
+   python -m urbanflow.cli examples/edges_example.csv --output-dir my_output
+   ```
+
+   Or use your own file:
+   ```bash
+   python -m urbanflow.cli path/to/your_edges.csv --output-dir my_output
    ```
 
    This will generate:
@@ -89,10 +103,12 @@ You can import `urbanflow` in any Python script or notebook:
 ```python
 from urbanflow import analyze_network, save_analysis_results
 
+# Define graph as dict: {node: [list of neighbors]}
+# To represent multiple parallel edges, repeat the neighbor in the list
 graph = {
     "1": ["3"],
     "2": ["3"],
-    "3": ["4", "4"],  # two parallel links 3->4
+    "3": ["4", "4"],  # two parallel links 3->4 (duplicate entry = multi-edge)
     "4": [],
 }
 
@@ -110,16 +126,29 @@ This reads `edges.csv`, runs the analysis, and writes outputs to the `analysis_o
 
 ## Sample Results
 
-Here’s a peek at the network visualization:
+Here's a peek at the network visualization:
 
 ![Graph Visualization](images/graph_visualization.png)
 
-You’ll get:
+You'll get:
 - A full list of paths between nodes.
 - A table of link usage and an OD–edge incidence matrix, saved as:
   - `urbanflow_edge_usage.csv`
   - `urbanflow_od_incidence.csv`
   - `urbanflow_results.xlsx`
+
+## Limitations
+
+- **Path enumeration**: For very dense or large networks, path enumeration can be computationally expensive. The current implementation finds all simple paths (no cycles) between all node pairs. For networks with many nodes or high connectivity, consider using the CLI with smaller subnetworks or implementing path length limits.
+- **Memory usage**: Large networks may require significant memory for storing all paths and the OD-incidence matrix.
+
+## Changelog
+
+### Recent Changes
+- Refactored into a professional Python package structure (`urbanflow/`)
+- Added CLI tool for analyzing networks from CSV files
+- Enhanced visualization with color-coded edge usage and parallel edge rendering
+- Improved documentation and setup instructions
 
 ## Join In
 

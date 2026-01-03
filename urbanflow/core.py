@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Tuple
@@ -57,33 +58,93 @@ def build_digraph(graph: Dict[Node, Sequence[Node]]) -> nx.MultiDiGraph:
     return G
 
 
-def find_paths(graph: Dict[Node, Sequence[Node]], start: Node, end: Node, path: PathType | None = None) -> List[PathType]:
-    """Find all simple paths from `start` to `end` using DFS."""
+def find_paths(
+    graph: Dict[Node, Sequence[Node]],
+    start: Node,
+    end: Node,
+    path: PathType | None = None,
+    max_path_length: int = 15,
+    max_paths: int = 1000,
+) -> List[PathType]:
+    """
+    Find all simple paths from `start` to `end` using DFS.
+    
+    Args:
+        graph: Graph as dict of node -> list of neighbors
+        start: Starting node
+        end: Destination node
+        path: Current path (internal, used for recursion)
+        max_path_length: Maximum path length to prevent explosion (default: 15)
+        max_paths: Maximum number of paths to return per OD pair (default: 1000)
+    
+    Returns:
+        List of paths (each path is a list of nodes)
+    """
     if path is None:
         path = []
+    
+    # Safety: prevent paths longer than max_path_length
+    if len(path) >= max_path_length:
+        return []
+    
     path = path + [start]
     if start == end:
         return [path]
     if start not in graph:
         return []
+    
     paths: List[PathType] = []
     for node in graph[start]:
-        if node not in path:
-            new_paths = find_paths(graph, node, end, path)
+        if node not in path:  # Simple path: no cycles
+            new_paths = find_paths(graph, node, end, path, max_path_length, max_paths)
             for new_path in new_paths:
                 paths.append(new_path)
+                # Safety: stop if we've found too many paths
+                if len(paths) >= max_paths:
+                    warnings.warn(
+                        f"Path enumeration limit reached ({max_paths}) for {start}->{end}. "
+                        "Some paths may be missing. Consider increasing max_paths or using a smaller subnetwork.",
+                        UserWarning,
+                    )
+                    return paths
     return paths
 
 
-def find_all_paths_between_all_pairs(graph: Dict[Node, Sequence[Node]]) -> List[PathType]:
-    """Compute all simple paths between all ordered node pairs in the graph."""
+def find_all_paths_between_all_pairs(
+    graph: Dict[Node, Sequence[Node]],
+    max_path_length: int = 15,
+    max_paths_per_od: int = 1000,
+) -> List[PathType]:
+    """
+    Compute all simple paths between all ordered node pairs in the graph.
+    
+    Args:
+        graph: Graph as dict of node -> list of neighbors
+        max_path_length: Maximum path length to prevent explosion (default: 15)
+        max_paths_per_od: Maximum paths per OD pair (default: 1000)
+    
+    Returns:
+        List of all paths found
+    """
     all_paths: List[PathType] = []
     nodes = list(graph.keys())
+    total_od_pairs = len(nodes) * (len(nodes) - 1)
+    
     for start_node in nodes:
         for end_node in nodes:
             if start_node != end_node:
-                paths = find_paths(graph, start_node, end_node)
+                paths = find_paths(
+                    graph, start_node, end_node, max_path_length=max_path_length, max_paths=max_paths_per_od
+                )
                 all_paths.extend(paths)
+    
+    if len(all_paths) > 10000:
+        warnings.warn(
+            f"Found {len(all_paths)} total paths. This may indicate a very dense network. "
+            "Consider using smaller subnetworks or stricter limits.",
+            UserWarning,
+        )
+    
     return all_paths
 
 
@@ -160,12 +221,39 @@ def build_od_incidence_matrix(
 
 def analyze_network(
     graph: Dict[Node, Sequence[Node]],
+    max_path_length: int = 15,
+    max_paths_per_od: int = 1000,
 ) -> UrbanFlowResult:
     """
     High-level one-shot analysis for a given graph.
-    Returns the NetworkX graph, all paths, repetition stats, and OD incidence matrix.
+    
+    Args:
+        graph: Graph as dict of node -> list of neighbors.
+            To represent parallel edges, repeat neighbors: {'3': ['4', '4']} = two edges 3->4
+        max_path_length: Maximum path length to prevent explosion (default: 15)
+        max_paths_per_od: Maximum paths per OD pair (default: 1000)
+    
+    Returns:
+        UrbanFlowResult with NetworkX graph, all paths, repetition stats, and OD incidence matrix.
+    
+    Raises:
+        ValueError: If graph is empty or invalid
+    
+    Example:
+        >>> graph = {"1": ["2"], "2": ["3"], "3": []}
+        >>> result = analyze_network(graph)
+        >>> print(len(result.all_paths))
     """
-    all_paths = find_all_paths_between_all_pairs(graph)
+    # Input validation
+    if not graph:
+        raise ValueError("Graph cannot be empty")
+    
+    if not isinstance(graph, dict):
+        raise ValueError(f"Graph must be a dict, got {type(graph)}")
+    
+    all_paths = find_all_paths_between_all_pairs(
+        graph, max_path_length=max_path_length, max_paths_per_od=max_paths_per_od
+    )
     path_reps = count_path_repetitions(all_paths)
     edge_reps = count_edge_repetitions(path_reps)
     incidence = build_od_incidence_matrix(graph, all_paths=all_paths)
